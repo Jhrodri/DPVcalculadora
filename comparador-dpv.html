@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador DPV — Actividad Práctica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        .zone-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            letter-spacing: 0.03em;
+        }
+        #hourSlider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right,
+                #0f172a 0%, #1e3a5f 15%,
+                #7dd3fc 30%, #fbbf24 50%,
+                #f97316 68%, #1e3a5f 83%, #0f172a 100%
+            );
+            outline: none;
+            cursor: pointer;
+        }
+        #hourSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #1e293b;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        #hourSlider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #1e293b;
+            cursor: pointer;
+        }
+        .scenario-btn {
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 2px solid transparent;
+            background: #f1f5f9;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .scenario-btn.active {
+            background: #1e293b;
+            color: #fff;
+            border-color: #1e293b;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <a href="dpv.html"
+               class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm font-semibold mb-4 transition-colors">
+                &larr; Volver a la calculadora
+            </a>
+            <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight mb-2">Comparador DPV</h1>
+            <p class="text-slate-500 font-medium">Actividad práctica: explora cómo cambia el ambiente en distintas situaciones</p>
+        </header>
+
+        <!-- ===================== COMPARATIVA 1 ===================== -->
+        <div class="glass-card p-6 md:p-8 mb-8">
+            <div class="mb-6">
+                <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Comparativa 1</span>
+                <h2 class="text-2xl font-extrabold text-slate-800 mt-3">Día vs Noche en el Invernadero</h2>
+                <p class="text-slate-500 text-sm mt-1">Arrastra el deslizador para explorar distintas horas. El panel derecho muestra siempre las condiciones <strong>12 horas después</strong>, para que puedas comparar un momento del día con su noche correspondiente.</p>
+            </div>
+
+            <!-- Slider de hora -->
+            <div class="mb-6">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="text-xs font-bold text-slate-400 w-12 text-right">Noche</span>
+                    <input type="range" id="hourSlider" min="0" max="23.75" step="0.25" value="14" class="flex-1">
+                    <span class="text-xs font-bold text-slate-400 w-12">Dia</span>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-400 font-medium px-14">
+                    <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+                </div>
+            </div>
+
+            <!-- Dos paneles -->
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_60px_1fr] gap-4 items-center">
+
+                <!-- Panel A -->
+                <div class="bg-amber-50 border border-amber-100 rounded-2xl p-5 text-center">
+                    <p class="text-xs font-bold text-amber-400 uppercase mb-1">Panel A</p>
+                    <p class="text-2xl font-black text-slate-700 mb-1" id="dayTimeLabel">14:00</p>
+                    <div class="flex justify-center gap-4 text-sm font-semibold text-slate-600 mb-3">
+                        <span id="dayTempLabel">—</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="dayHumLabel">—</span>
+                    </div>
+                    <canvas id="gaugeDay" style="width:100%;height:150px;display:block;"></canvas>
+                    <p class="text-4xl font-black text-slate-800 mt-3" id="dayDPV">—</p>
+                    <p class="text-xs text-slate-400 -mt-1 mb-2">kPa</p>
+                    <span id="dayZone" class="zone-badge bg-slate-100 text-slate-500">—</span>
+                </div>
+
+                <!-- Divisor central -->
+                <div class="hidden md:flex flex-col items-center justify-center gap-3">
+                    <span class="text-slate-300 text-2xl font-black">vs</span>
+                    <div id="diffBadge" class="text-[11px] font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-2 py-1 text-center shadow-sm leading-tight"></div>
+                </div>
+
+                <!-- Panel B (+12 h) -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-center">
+                    <p class="text-xs font-bold text-indigo-400 uppercase mb-1">Panel B <span class="font-normal normal-case text-slate-300 text-xs">(+12 h)</span></p>
+                    <p class="text-2xl font-black text-slate-700 mb-1" id="nightTimeLabel">02:00</p>
+                    <div class="flex justify-center gap-4 text-sm font-semibold text-slate-600 mb-3">
+                        <span id="nightTempLabel">—</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="nightHumLabel">—</span>
+                    </div>
+                    <canvas id="gaugeNight" style="width:100%;height:150px;display:block;"></canvas>
+                    <p class="text-4xl font-black text-slate-800 mt-3" id="nightDPV">—</p>
+                    <p class="text-xs text-slate-400 -mt-1 mb-2">kPa</p>
+                    <span id="nightZone" class="zone-badge bg-slate-100 text-slate-500">—</span>
+                </div>
+            </div>
+
+            <!-- Observación dinámica -->
+            <div class="mt-6 rounded-xl bg-blue-50 border border-blue-100 p-4">
+                <p class="text-xs font-bold text-blue-400 uppercase mb-1">Observacion</p>
+                <p id="obs1" class="text-sm font-semibold text-blue-700 leading-relaxed"></p>
+            </div>
+        </div>
+
+        <!-- ===================== COMPARATIVA 2 ===================== -->
+        <div class="glass-card p-6 md:p-8 mb-8">
+            <div class="mb-6">
+                <span class="text-xs font-bold uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1 rounded-full">Comparativa 2</span>
+                <h2 class="text-2xl font-extrabold text-slate-800 mt-3">Exterior vs Interior (Invernadero climatizado)</h2>
+                <p class="text-slate-500 text-sm mt-1">Selecciona una estacion del año para comparar las condiciones al aire libre con las de un invernadero mediterráneo bien gestionado.</p>
+            </div>
+
+            <!-- Botones de escenario -->
+            <div class="flex flex-wrap gap-2 mb-6" id="scenarioButtons">
+                <button data-scenario="verano"    class="scenario-btn active">Verano seco</button>
+                <button data-scenario="primavera" class="scenario-btn">Primavera</button>
+                <button data-scenario="invierno"  class="scenario-btn">Invierno</button>
+            </div>
+
+            <!-- Dos paneles -->
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_60px_1fr] gap-4 items-center">
+
+                <!-- Exterior -->
+                <div class="bg-orange-50 border border-orange-100 rounded-2xl p-5 text-center">
+                    <p class="text-xs font-bold text-orange-400 uppercase mb-1">Exterior</p>
+                    <p class="text-sm font-semibold text-slate-500 mb-3 min-h-[2.5rem] flex items-center justify-center" id="extLabel">—</p>
+                    <div class="flex justify-center gap-4 text-sm font-semibold text-slate-600 mb-3">
+                        <span id="extTempLabel">—</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="extHumLabel">—</span>
+                    </div>
+                    <canvas id="gaugeExt" style="width:100%;height:150px;display:block;"></canvas>
+                    <p class="text-4xl font-black text-slate-800 mt-3" id="extDPV">—</p>
+                    <p class="text-xs text-slate-400 -mt-1 mb-2">kPa</p>
+                    <span id="extZone" class="zone-badge bg-slate-100 text-slate-500">—</span>
+                </div>
+
+                <!-- Divisor -->
+                <div class="hidden md:flex flex-col items-center justify-center gap-3">
+                    <span class="text-slate-300 text-2xl font-black">vs</span>
+                    <div id="diff2Badge" class="text-[11px] font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-2 py-1 text-center shadow-sm leading-tight"></div>
+                </div>
+
+                <!-- Interior -->
+                <div class="bg-green-50 border border-green-100 rounded-2xl p-5 text-center">
+                    <p class="text-xs font-bold text-green-600 uppercase mb-1">Interior</p>
+                    <p class="text-sm font-semibold text-slate-500 mb-3 min-h-[2.5rem] flex items-center justify-center" id="intLabel">—</p>
+                    <div class="flex justify-center gap-4 text-sm font-semibold text-slate-600 mb-3">
+                        <span id="intTempLabel">—</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="intHumLabel">—</span>
+                    </div>
+                    <canvas id="gaugeInt" style="width:100%;height:150px;display:block;"></canvas>
+                    <p class="text-4xl font-black text-slate-800 mt-3" id="intDPV">—</p>
+                    <p class="text-xs text-slate-400 -mt-1 mb-2">kPa</p>
+                    <span id="intZone" class="zone-badge bg-slate-100 text-slate-500">—</span>
+                </div>
+            </div>
+
+            <!-- Reflexión por escenario -->
+            <div class="mt-6 rounded-xl bg-green-50 border border-green-100 p-4">
+                <p class="text-xs font-bold text-green-500 uppercase mb-1">Reflexion</p>
+                <p id="obs2" class="text-sm font-semibold text-green-700 leading-relaxed"></p>
+            </div>
+        </div>
+
+        <!-- Preguntas de reflexion -->
+        <div class="glass-card p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-extrabold text-slate-800 mb-5">Preguntas de reflexion</h2>
+            <ol class="space-y-4 text-sm text-slate-600 list-decimal list-inside leading-relaxed">
+                <li>
+                    <strong>Comparativa 1</strong> — Mueve el deslizador hasta las 14:00.
+                    ¿En qué zona DPV se encuentra el cultivo? ¿Qué riesgo supone para la planta?
+                </li>
+                <li>
+                    <strong>Comparativa 1</strong> — Ahora sitúalo en las 02:00.
+                    ¿Por qué sube la humedad relativa por la noche aunque no llueva? ¿Qué efecto tiene en el DPV?
+                </li>
+                <li>
+                    <strong>Comparativa 2, Verano seco</strong> — El DPV exterior supera los 3 kPa.
+                    ¿Qué le ocurriría a una planta cultivada sin invernadero? ¿Qué herramientas tiene el agricultor para reducir el DPV interior?
+                </li>
+                <li>
+                    <strong>Comparativa 2, Invierno</strong> — El exterior tiene un DPV muy bajo.
+                    ¿Qué enfermedades conoces que sean más probables en esas condiciones? ¿Cómo actúa la calefaccion del invernadero sobre el DPV?
+                </li>
+                <li>
+                    <strong>Cuestion general</strong> — ¿Por qué no basta con controlar solo la temperatura o solo la humedad?
+                    Razona tu respuesta usando la relacion entre ambas variables y el DPV.
+                </li>
+            </ol>
+        </div>
+
+ <footer class="mt-12 text-center text-slate-500 pb-10">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" alt="CC" class="h-6 opacity-60">
+                <p class="text-xs font-medium">© 2026 María Alonso, Francisco Javier Criado y Joaquín Hernández</p>
+                
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            
+                <img src="logos.png?raw=true", width=200>
+                
+            </div>           
+
+        </footer>
+    </div>
+
+    <script>
+        // --- Cálculos ---
+
+        function calcVPD(temp, hum) {
+            const es = 0.6108 * Math.exp((17.27 * temp) / (temp + 237.3));
+            return es * (1 - hum / 100);
+        }
+
+        function getZone(vpd) {
+            if (vpd < 0.4)  return { label: 'Riesgo fúngico', cls: 'bg-blue-100 text-blue-700' };
+            if (vpd < 0.8)  return { label: 'Propagación',    cls: 'bg-green-100 text-green-700' };
+            if (vpd < 1.2)  return { label: 'Vegetativo',     cls: 'bg-green-200 text-green-800' };
+            if (vpd < 1.6)  return { label: 'Floración',      cls: 'bg-amber-100 text-amber-700' };
+            return           { label: 'Estrés hídrico',       cls: 'bg-red-100 text-red-700' };
+        }
+
+        // Curvas invernadero mediterráneo
+        // T(h) = 23 + 4·cos((h−14)·2π/24) → mín 19°C a las 2h, máx 27°C a las 14h
+        // RH(h) = 65 − 15·cos((h−14)·2π/24) → mín 50% a las 14h, máx 80% a las 2h
+        function simValues(h) {
+            const a = (h - 14) * 2 * Math.PI / 24;
+            return { temp: 23 + 4 * Math.cos(a), hum: 65 - 15 * Math.cos(a) };
+        }
+
+        function formatH(h) {
+            const hh = String(Math.floor(h % 24)).padStart(2, '0');
+            const mm = String(Math.round((h % 1) * 60)).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        // --- Mini velocímetro ---
+
+        function drawMiniGauge(canvasId, vpd) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || canvas.offsetWidth === 0) return;
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.offsetWidth;
+            const H = canvas.offsetHeight;
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const MAX = 2.5;
+            const cx  = W / 2;
+            const cy  = H - 12;
+            const R   = Math.min(cx - 16, cy - 22);
+            const TW  = Math.round(R * 0.20);
+            const va  = v => Math.PI + (Math.min(Math.max(v, 0), MAX) / MAX) * Math.PI;
+
+            const zones = [
+                { from: 0,   to: 0.4, fill: '#93c5fd' },
+                { from: 0.4, to: 0.8, fill: '#86efac' },
+                { from: 0.8, to: 1.2, fill: '#4ade80' },
+                { from: 1.2, to: 1.6, fill: '#fbbf24' },
+                { from: 1.6, to: MAX,  fill: '#f87171' },
+            ];
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Fondo gris
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, Math.PI, 2 * Math.PI, false);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = TW;
+            ctx.stroke();
+
+            // Zonas de color
+            for (const z of zones) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, R, va(z.from), va(z.to), false);
+                ctx.strokeStyle = z.fill;
+                ctx.lineWidth = TW;
+                ctx.stroke();
+            }
+
+            // Separadores blancos
+            [0.4, 0.8, 1.2, 1.6].forEach(v => {
+                const a = va(v);
+                const r1 = R - TW / 2, r2 = R + TW / 2;
+                ctx.beginPath();
+                ctx.moveTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a));
+                ctx.lineTo(cx + r2 * Math.cos(a), cy + r2 * Math.sin(a));
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Aguja
+            const na   = va(Math.min(vpd, MAX + 0.1));
+            const nLen = R - TW / 2 - 3;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.22)';
+            ctx.shadowBlur  = 5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + nLen * Math.cos(na), cy + nLen * Math.sin(na));
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth   = 3;
+            ctx.lineCap     = 'round';
+            ctx.stroke();
+            ctx.restore();
+
+            // Pivote
+            ctx.beginPath();
+            ctx.arc(cx, cy, TW * 0.32, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, TW * 0.15, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+        }
+
+        function updatePanel(canvasId, timeLabelId, tempId, humId, dpvId, zoneId, timeLabel, temp, hum) {
+            const vpd  = calcVPD(temp, hum);
+            const zone = getZone(vpd);
+            if (timeLabelId) document.getElementById(timeLabelId).innerText = timeLabel;
+            document.getElementById(tempId).innerText = `${temp.toFixed(1)}\u00B0C`;
+            document.getElementById(humId).innerText  = `${Math.round(hum)}% HR`;
+            document.getElementById(dpvId).innerText  = vpd.toFixed(2);
+            const zEl = document.getElementById(zoneId);
+            zEl.innerText   = zone.label;
+            zEl.className   = `zone-badge ${zone.cls}`;
+            drawMiniGauge(canvasId, vpd);
+            return vpd;
+        }
+
+        // --- Comparativa 1: Día vs Noche ---
+
+        function updateComp1(h) {
+            const hA = h;
+            const hB = (h + 12) % 24;
+            const vA = simValues(hA);
+            const vB = simValues(hB);
+
+            const dpvA = updatePanel('gaugeDay',   'dayTimeLabel',  'dayTempLabel',   'dayHumLabel',   'dayDPV',   'dayZone',   formatH(hA), vA.temp, vA.hum);
+            const dpvB = updatePanel('gaugeNight', 'nightTimeLabel','nightTempLabel', 'nightHumLabel', 'nightDPV', 'nightZone', formatH(hB), vB.temp, vB.hum);
+
+            // Diferencia entre paneles
+            const diff  = dpvA - dpvB;
+            const badge = document.getElementById('diffBadge');
+            badge.innerText = Math.abs(diff) < 0.05
+                ? 'Igual'
+                : (diff > 0 ? 'A >' : 'B >') + '\n' + Math.abs(diff).toFixed(2) + ' kPa';
+
+            // Observación dinámica
+            let obs;
+            const hi  = diff >= 0 ? 'A' : 'B';
+            const hiT = diff >= 0 ? formatH(hA) : formatH(hB);
+            const maxV = Math.max(dpvA, dpvB);
+            const minV = Math.min(dpvA, dpvB);
+
+            if (Math.abs(diff) < 0.12) {
+                obs = 'Ambos momentos tienen condiciones similares. Prueba a mover el deslizador hacia las 14:00 para ver la máxima diferencia entre día y noche.';
+            } else if (maxV > 1.6) {
+                obs = `El Panel ${hi} (${hiT}) entra en zona de estrés hídrico (${maxV.toFixed(2)} kPa). El panel opuesto, en cambio, tiene un DPV mucho más bajo (${minV.toFixed(2)} kPa): de noche baja la temperatura y sube la humedad, reduciendo la demanda de vapor del aire.`;
+            } else if (minV < 0.4) {
+                obs = `El panel nocturno tiene un DPV de ${minV.toFixed(2)} kPa — zona de riesgo fúngico. El exceso de humedad puede favorecer hongos como Botrytis. Compara con el panel diurno (${maxV.toFixed(2)} kPa): la calefacción nocturna o la ventilación al amanecer ayudan a subir el DPV.`;
+            } else {
+                const quien = diff > 0 ? 'De día la temperatura sube y la humedad baja' : 'De noche la temperatura baja y la humedad sube';
+                obs = `Panel A: ${dpvA.toFixed(2)} kPa — Panel B: ${dpvB.toFixed(2)} kPa. Diferencia: ${Math.abs(diff).toFixed(2)} kPa. ${quien}, modificando la cantidad de vapor que el aire puede absorber de la planta.`;
+            }
+            document.getElementById('obs1').innerText = obs;
+        }
+
+        // --- Comparativa 2: Exterior vs Interior ---
+
+        const SCENARIOS = {
+            verano: {
+                ext: { temp: 38, hum: 20, label: 'Día de verano — 38°C, 20% HR' },
+                int: { temp: 24, hum: 70, label: 'Invernadero con nebulización — 24°C, 70% HR' },
+                obs: 'En verano el aire exterior es muy seco y caliente: el DPV supera los 3 kPa, causando cierre estomático y detención del crecimiento. El invernadero, con sombreado, ventilación forzada y nebulización, reduce la temperatura y eleva la humedad, manteniendo el DPV en zona vegetativa y protegiendo al cultivo.',
+            },
+            primavera: {
+                ext: { temp: 26, hum: 55, label: 'Día de primavera — 26°C, 55% HR' },
+                int: { temp: 22, hum: 68, label: 'Invernadero ventilado — 22°C, 68% HR' },
+                obs: 'En primavera el exterior ya ofrece condiciones aceptables, pero el invernadero climatizado permite ajustar el ambiente hacia la zona vegetativa óptima: ligeramente más fresco y húmedo. Esta diferencia, aunque pequeña, se traduce en mayor velocidad de crecimiento y menor riesgo de enfermedades.',
+            },
+            invierno: {
+                ext: { temp: 5,  hum: 88, label: 'Día de invierno — 5°C, 88% HR' },
+                int: { temp: 20, hum: 62, label: 'Invernadero calefactado — 20°C, 62% HR' },
+                obs: 'En invierno el aire frío y húmedo del exterior tiene un DPV muy bajo: los estomas se cierran y el riesgo de ataques fúngicos es muy alto. La calefacción del invernadero eleva la temperatura, lo que reduce la humedad relativa y sube el DPV hasta la zona vegetativa, creando un ambiente activo y sano para el cultivo.',
+            },
+        };
+
+        let activeScenario = 'verano';
+
+        function updateComp2(key) {
+            activeScenario = key;
+            const sc = SCENARIOS[key];
+
+            const dpvExt = updatePanel('gaugeExt', 'extLabel', 'extTempLabel', 'extHumLabel', 'extDPV', 'extZone', sc.ext.label, sc.ext.temp, sc.ext.hum);
+            const dpvInt = updatePanel('gaugeInt', 'intLabel', 'intTempLabel', 'intHumLabel', 'intDPV', 'intZone', sc.int.label, sc.int.temp, sc.int.hum);
+
+            const diff2  = dpvExt - dpvInt;
+            const badge2 = document.getElementById('diff2Badge');
+            badge2.innerText = Math.abs(diff2) < 0.05
+                ? 'Igual'
+                : (diff2 > 0 ? 'Ext >' : 'Int >') + '\n' + Math.abs(diff2).toFixed(2) + ' kPa';
+
+            document.getElementById('obs2').innerText = sc.obs;
+
+            document.querySelectorAll('.scenario-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.scenario === key);
+            });
+        }
+
+        // --- Eventos ---
+
+        document.getElementById('hourSlider').addEventListener('input', e => {
+            updateComp1(parseFloat(e.target.value));
+        });
+
+        document.getElementById('scenarioButtons').addEventListener('click', e => {
+            const btn = e.target.closest('.scenario-btn');
+            if (btn) updateComp2(btn.dataset.scenario);
+        });
+
+        window.addEventListener('resize', () => {
+            updateComp1(parseFloat(document.getElementById('hourSlider').value));
+            updateComp2(activeScenario);
+        });
+
+        // Init
+        window.onload = () => {
+            updateComp1(14);
+            updateComp2('verano');
+        };
+    </script>
+</body>
+</html>

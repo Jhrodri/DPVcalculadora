@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz DPV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        .answer-btn {
+            width: 100%;
+            text-align: left;
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, transform 0.1s;
+        }
+        .answer-btn:hover:not(:disabled) {
+            border-color: #93c5fd;
+            background: #eff6ff;
+            transform: translateX(4px);
+        }
+        .answer-btn.correct {
+            border-color: #22c55e;
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+        }
+        .answer-btn.wrong {
+            border-color: #ef4444;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+        }
+        .answer-btn.dimmed {
+            opacity: 0.4;
+        }
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(to right, #3b82f6, #22c55e);
+            transition: width 0.4s ease;
+        }
+        .score-ring {
+            width: 140px;
+            height: 140px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+<div class="max-w-2xl mx-auto">
+
+    <header class="text-center mb-8">
+                    <a href="dpv.html"
+               class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm font-semibold mb-4 transition-colors">
+                &larr; Volver a la calculadora
+            </a>
+        <h1 class="text-3xl font-extrabold text-slate-800 mb-1">Quiz DPV</h1>
+        <p class="text-slate-500 font-medium">Pon a prueba lo que has aprendido sobre el Déficit de Presión de Vapor</p>
+    </header>
+
+    <!-- Pantalla de inicio -->
+    <div id="screenStart" class="glass-card p-8 text-center">
+        <div class="text-6xl mb-4">🌿</div>
+        <h2 class="text-2xl font-bold text-slate-700 mb-3">¿Preparado?</h2>
+        <p class="text-slate-500 mb-8">10 preguntas sobre el DPV y su efecto en los cultivos.<br>Sin fórmulas, solo conceptos.</p>
+        <button onclick="startQuiz()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl transition-colors">
+            Comenzar el quiz
+        </button>
+    </div>
+
+    <!-- Pantalla de pregunta -->
+    <div id="screenQuestion" class="hidden">
+        <!-- Progreso -->
+        <div class="mb-5">
+            <div class="flex justify-between text-sm font-semibold text-slate-500 mb-2">
+                <span id="progressLabel">Pregunta 1 de 10</span>
+                <span id="scoreLabel">0 correctas</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="glass-card p-8">
+            <!-- Etiqueta de tema -->
+            <span id="qTopic" class="text-xs font-bold uppercase tracking-widest text-blue-500 mb-3 block"></span>
+
+            <!-- Pregunta -->
+            <p class="text-xl font-bold text-slate-800 mb-7 leading-snug" id="qText"></p>
+
+            <!-- Opciones -->
+            <div class="space-y-3" id="answersContainer"></div>
+
+            <!-- Feedback -->
+            <div id="feedback" class="hidden mt-5 p-4 rounded-xl">
+                <p class="font-bold mb-1" id="feedbackTitle"></p>
+                <p class="text-sm" id="feedbackExplain"></p>
+            </div>
+
+            <!-- Siguiente -->
+            <div class="mt-6 text-right">
+                <button id="nextBtn" onclick="nextQuestion()" class="hidden px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors">
+                    Siguiente →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de resultados -->
+    <div id="screenResult" class="glass-card p-8 text-center hidden">
+        <h2 class="text-2xl font-bold text-slate-700 mb-6">Resultado final</h2>
+
+        <svg class="score-ring mx-auto mb-4" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="58" fill="none" stroke="#e2e8f0" stroke-width="12"/>
+            <circle id="scoreArc" cx="70" cy="70" r="58" fill="none" stroke="#22c55e" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="364" stroke-dashoffset="364"
+                transform="rotate(-90 70 70)" style="transition:stroke-dashoffset 1s ease"/>
+            <text x="70" y="75" text-anchor="middle" font-size="32" font-weight="800" fill="#1e293b" id="scoreText">0/10</text>
+        </svg>
+
+        <p class="text-lg font-semibold text-slate-600 mb-2" id="resultMsg"></p>
+        <p class="text-sm text-slate-400 mb-8" id="resultSub"></p>
+
+        <!-- Resumen de respuestas -->
+        <div id="resultSummary" class="text-left space-y-3 mb-8"></div>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button onclick="startQuiz()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors">
+                Reintentar
+            </button>
+            <button onclick="window.close()" class="px-6 py-2 border-2 border-slate-300 hover:border-slate-400 text-slate-600 font-bold rounded-xl transition-colors">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+<!--
+    <footer class="mt-10 text-center text-slate-400 text-xs pb-6">
+        
+    </footer>
+-->
+    <footer class="mt-12 text-center text-slate-500 pb-10">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" alt="CC" class="h-6 opacity-60">
+                <p class="text-xs font-medium">© 2026 María Alonso, Francisco Javier Criado y Joaquín Hernández</p>
+                
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            
+                <img src="logos.png?raw=true", width=150>
+                
+            </div>           
+<!--            <p class="text-[10px] uppercase tracking-tighter">Esquema: DPV = 0.6108 * exp(17.27*T / (T+237.3)) * (1 - HR/100)</p>-->
+        </footer>
+    
+</div>
+
+<script>
+const QUESTIONS = [
+    {
+        topic: 'Zonas de DPV',
+        text: '¿Qué riesgo principal existe cuando el DPV es muy bajo (menos de 0,4 kPa)?',
+        answers: [
+            'La planta transpira en exceso y se deshidrata',
+            'Aumenta el riesgo de hongos y enfermedades',
+            'Los estomas se abren demasiado',
+            'La planta deja de crecer por falta de CO₂',
+        ],
+        correct: 1,
+        explain: 'Con DPV muy bajo la humedad ambiental es altísima. Los estomas se cierran y el agua no se evapora, creando el ambiente húmedo que necesitan los hongos para proliferar.',
+    },
+    {
+        topic: 'Fases de cultivo',
+        text: '¿En qué rango de DPV se recomienda cultivar esquejes y plántulas recién germinadas?',
+        answers: [
+            'Menos de 0,4 kPa (Riesgo fúngico)',
+            'Entre 0,4 y 0,8 kPa (Propagación)',
+            'Entre 1,2 y 1,6 kPa (Floración)',
+            'Más de 1,6 kPa (Estrés hídrico)',
+        ],
+        correct: 1,
+        explain: 'Los esquejes y plántulas tienen raíces débiles y no pueden absorber suficiente agua. Un DPV bajo (0,4–0,8 kPa) reduce la transpiración y evita que se deshidraten antes de enraizar.',
+    },
+    {
+        topic: 'Estomas',
+        text: '¿Qué hacen los estomas de una planta cuando el DPV supera 1,6 kPa?',
+        answers: [
+            'Se abren más para transpirar y enfriarse',
+            'Se cierran para conservar el agua interior',
+            'No cambian, el DPV no les afecta',
+            'Producen más clorofila para compensar',
+        ],
+        correct: 1,
+        explain: 'Ante un DPV muy alto, la planta detecta que perdería demasiada agua si mantiene los estomas abiertos. Los cierra como mecanismo de defensa, lo que también detiene la fotosíntesis y el crecimiento.',
+    },
+    {
+        topic: 'Temperatura y humedad',
+        text: 'Si en un invernadero sube la temperatura sin cambiar la humedad absoluta, ¿qué ocurre con el DPV?',
+        answers: [
+            'El DPV baja porque hace más calor',
+            'El DPV no cambia, solo depende de la humedad',
+            'El DPV sube porque el aire caliente puede contener más vapor',
+            'El DPV sube solo si la humedad relativa también sube',
+        ],
+        correct: 2,
+        explain: 'Al subir la temperatura, el aire puede contener más vapor de agua (mayor capacidad de saturación). Si la cantidad de vapor real no cambia, la diferencia entre lo que hay y lo que podría haber (el DPV) aumenta.',
+    },
+    {
+        topic: 'Identificación de zonas',
+        text: '¿Cuál de estos valores de DPV corresponde a la zona de FLORACIÓN?',
+        answers: [
+            '0,2 kPa',
+            '0,7 kPa',
+            '1,4 kPa',
+            '2,1 kPa',
+        ],
+        correct: 2,
+        explain: 'La zona de floración se sitúa entre 1,2 y 1,6 kPa. A 1,4 kPa la planta transpira activamente, lo que favorece el transporte de calcio y nutrientes hacia flores y frutos.',
+    },
+    {
+        topic: 'Estomas',
+        text: '¿Cómo se llama la estructura de la hoja que regula la entrada de CO₂ y la salida de vapor de agua?',
+        answers: [
+            'Cloroplasto',
+            'Estoma',
+            'Xilema',
+            'Tricoma',
+        ],
+        correct: 1,
+        explain: 'Los estomas son pequeños poros en la epidermis de las hojas, rodeados por células oclusivas. Abriéndose y cerrándose regulan tanto la entrada de CO₂ para la fotosíntesis como la pérdida de agua por transpiración.',
+    },
+    {
+        topic: 'Ciclo diario',
+        text: '¿Por qué el DPV en un invernadero suele ser más alto a mediodía que por la noche?',
+        answers: [
+            'Porque hay más luz y las plantas transpiran más CO₂',
+            'Porque la temperatura es mayor y la humedad relativa es menor',
+            'Porque los agricultores riegan menos de día',
+            'Porque el oxígeno aumenta durante el día',
+        ],
+        correct: 1,
+        explain: 'A mediodía coinciden la temperatura máxima y la humedad relativa mínima del día. Ambos factores elevan el DPV: más temperatura = mayor capacidad de saturación; menos HR = el aire está más "seco" respecto a su límite.',
+    },
+    {
+        topic: 'Consecuencias',
+        text: '¿Qué consecuencia tiene mantener un cultivo durante semanas con DPV muy alto?',
+        answers: [
+            'Las plantas crecen más rápido al transpirar más',
+            'Aumenta la producción de flores y frutos',
+            'Los estomas permanecen cerrados, frenando el crecimiento',
+            'Disminuye el riesgo de plagas y enfermedades',
+        ],
+        correct: 2,
+        explain: 'Con estomas cerrados de forma crónica, la planta no puede fijar CO₂ ni transportar nutrientes eficientemente. El crecimiento se ralentiza o detiene, y la calidad del fruto empeora.',
+    },
+    {
+        topic: 'Temperatura y humedad',
+        text: '¿Cuál de estas combinaciones daría el DPV más BAJO?',
+        answers: [
+            '30°C y 40% HR',
+            '20°C y 85% HR',
+            '25°C y 60% HR',
+            '28°C y 55% HR',
+        ],
+        correct: 1,
+        explain: 'A 20°C el aire de saturación contiene poco vapor. Con 85% de HR el aire ya está casi saturado: la diferencia (DPV) es mínima. En cambio a 30°C con 40% HR, la diferencia entre la saturación y el contenido real es enorme.',
+    },
+    {
+        topic: 'Fases de cultivo',
+        text: 'Un agricultor observa que sus plantas tienen hojas grandes y vigorosas pero aún no florecen. ¿En qué zona de DPV debería estar trabajando?',
+        answers: [
+            'Riesgo fúngico (< 0,4 kPa)',
+            'Propagación (0,4–0,8 kPa)',
+            'Vegetativo (0,8–1,2 kPa)',
+            'Estrés hídrico (> 1,6 kPa)',
+        ],
+        correct: 2,
+        explain: 'La fase vegetativa de crecimiento activo (hojas, tallos) se corresponde con un DPV entre 0,8 y 1,2 kPa. La transpiración es óptima para mover nutrientes, sin llegar al estrés.',
+    },
+];
+
+let currentQ   = 0;
+let score      = 0;
+let answered   = false;
+let userAnswers = [];
+let shuffled   = [];
+
+function startQuiz() {
+    currentQ    = 0;
+    score       = 0;
+    answered    = false;
+    userAnswers = [];
+    shuffled    = shuffle([...QUESTIONS]);
+
+    document.getElementById('screenStart').classList.add('hidden');
+    document.getElementById('screenResult').classList.add('hidden');
+    document.getElementById('screenQuestion').classList.remove('hidden');
+    showQuestion();
+}
+
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function showQuestion() {
+    answered = false;
+    const q = shuffled[currentQ];
+
+    document.getElementById('progressLabel').innerText = `Pregunta ${currentQ + 1} de ${shuffled.length}`;
+    document.getElementById('scoreLabel').innerText    = `${score} correcta${score !== 1 ? 's' : ''}`;
+    document.getElementById('progressFill').style.width = `${(currentQ / shuffled.length) * 100}%`;
+    document.getElementById('qTopic').innerText  = q.topic;
+    document.getElementById('qText').innerText   = q.text;
+    document.getElementById('feedback').classList.add('hidden');
+    document.getElementById('nextBtn').classList.add('hidden');
+
+    const container = document.getElementById('answersContainer');
+    container.innerHTML = '';
+    q.answers.forEach((ans, i) => {
+        const btn = document.createElement('button');
+        btn.className   = 'answer-btn';
+        btn.innerText   = ans;
+        btn.onclick     = () => selectAnswer(i);
+        container.appendChild(btn);
+    });
+}
+
+function selectAnswer(idx) {
+    if (answered) return;
+    answered = true;
+    const q    = shuffled[currentQ];
+    const btns = document.querySelectorAll('.answer-btn');
+    const isCorrect = idx === q.correct;
+
+    if (isCorrect) score++;
+    userAnswers.push({ q, chosen: idx, isCorrect });
+
+    btns.forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.correct) {
+            btn.classList.add('correct');
+        } else if (i === idx && !isCorrect) {
+            btn.classList.add('wrong');
+        } else {
+            btn.classList.add('dimmed');
+        }
+    });
+
+    const fb     = document.getElementById('feedback');
+    const title  = document.getElementById('feedbackTitle');
+    const explain = document.getElementById('feedbackExplain');
+    fb.classList.remove('hidden');
+
+    if (isCorrect) {
+        fb.className = 'mt-5 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800';
+        title.innerText   = 'Correcto';
+    } else {
+        fb.className = 'mt-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800';
+        title.innerText   = 'Incorrecto';
+    }
+    explain.innerText = q.explain;
+
+    document.getElementById('scoreLabel').innerText = `${score} correcta${score !== 1 ? 's' : ''}`;
+
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.classList.remove('hidden');
+    nextBtn.innerText = currentQ + 1 < shuffled.length ? 'Siguiente →' : 'Ver resultado';
+}
+
+function nextQuestion() {
+    currentQ++;
+    if (currentQ < shuffled.length) {
+        showQuestion();
+    } else {
+        showResult();
+    }
+}
+
+function showResult() {
+    document.getElementById('screenQuestion').classList.add('hidden');
+    document.getElementById('screenResult').classList.remove('hidden');
+
+    const pct = score / shuffled.length;
+    document.getElementById('scoreText').textContent = `${score}/${shuffled.length}`;
+
+    // Animate ring
+    const circumference = 2 * Math.PI * 58; // ≈ 364.4
+    const arc = document.getElementById('scoreArc');
+    arc.style.stroke = pct >= 0.7 ? '#22c55e' : pct >= 0.4 ? '#f59e0b' : '#ef4444';
+    setTimeout(() => {
+        arc.style.strokeDashoffset = circumference * (1 - pct);
+    }, 100);
+
+    let msg, sub;
+    if (pct === 1) {
+        msg = '¡Perfecto! Dominas el DPV.';
+        sub = 'Excelente trabajo. Has respondido todo correctamente.';
+    } else if (pct >= 0.8) {
+        msg = 'Muy bien, casi perfecto.';
+        sub = 'Solo algunos conceptos te quedan por afianzar.';
+    } else if (pct >= 0.6) {
+        msg = 'Bien, pero puedes mejorar.';
+        sub = 'Repasa los errores y vuelve a intentarlo.';
+    } else if (pct >= 0.4) {
+        msg = 'Hay margen de mejora.';
+        sub = 'Lee bien las explicaciones de cada pregunta y vuelve a la calculadora.';
+    } else {
+        msg = 'Sigue practicando.';
+        sub = 'Explora la calculadora DPV interactiva y luego vuelve al quiz.';
+    }
+    document.getElementById('resultMsg').innerText = msg;
+    document.getElementById('resultSub').innerText = sub;
+
+    // Summary
+    const summary = document.getElementById('resultSummary');
+    summary.innerHTML = userAnswers.map((ua, i) => `
+        <div class="p-3 rounded-xl border-2 ${ua.isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
+            <p class="text-xs font-bold uppercase tracking-wide ${ua.isCorrect ? 'text-green-600' : 'text-red-600'} mb-1">
+                ${ua.isCorrect ? 'Correcta' : 'Incorrecta'} · ${ua.q.topic}
+            </p>
+            <p class="text-sm font-semibold text-slate-700">${ua.q.text}</p>
+            ${!ua.isCorrect ? `<p class="text-xs text-slate-500 mt-1">Respuesta correcta: <strong>${ua.q.answers[ua.q.correct]}</strong></p>` : ''}
+        </div>
+    `).join('');
+}
+
+// Mostrar pantalla de inicio al cargar
+document.getElementById('screenStart').classList.remove('hidden');
+</script>
+</body>
+</html>

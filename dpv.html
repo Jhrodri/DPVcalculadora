@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPV - Calculadora </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --optimal: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Termómetro estilizado */
+        .thermometer-wrapper {
+            width: 60px;
+            height: 300px;
+            background: #e2e8f0;
+            border-radius: 30px;
+            position: relative;
+            border: 4px solid #fff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            cursor: ns-resize;
+            touch-action: none;
+        }
+
+        .thermometer-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            border-radius: 0 0 30px 30px;
+            background: linear-gradient(to top, #3b82f6, #ef4444);
+            transition: height 0.1s ease-out;
+        }
+
+        .thermometer-handle {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 4px;
+            background: #1e293b;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+
+        /* Dial de Humedad */
+        .dial-container {
+            width: 220px;
+            height: 220px;
+            position: relative;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .dial-svg {
+            transform: rotate(-90deg);
+        }
+
+        .dial-track {
+            fill: none;
+            stroke: #e2e8f0;
+            stroke-width: 12;
+        }
+
+        .dial-progress {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dasharray 0.1s ease-out;
+        }
+
+        /* Slider simulación día/noche */
+        #simSlider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right,
+                #0f172a 0%, #1e3a5f 15%,
+                #7dd3fc 30%, #fbbf24 50%,
+                #f97316 68%, #1e3a5f 83%, #0f172a 100%
+            );
+            outline: none;
+            cursor: pointer;
+        }
+        #simSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #1e293b;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        #simSlider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #1e293b;
+            cursor: pointer;
+        }
+
+        .zone-indicator {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+</style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight mb-2">Calculadora DPV</h1>
+            <p class="text-slate-500 font-medium">Control de la higrometría para cultivos </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Columna de Controles -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="glass-card p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <!-- Temperatura -->
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-lg font-bold text-slate-700 mb-6">Temperatura del Aire</h3>
+                        <div class="thermometer-wrapper" id="tempControl">
+                            <div class="thermometer-fill" id="tempFill"></div>
+                            <div class="thermometer-handle" id="tempHandle"></div>
+                        </div>
+                        <div class="mt-6 text-3xl font-black text-slate-800" id="tempValue">25.0°C</div>
+                    </div>
+
+                    <!-- Humedad -->
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-lg font-bold text-slate-700 mb-6">Humedad Relativa</h3>
+                        <div class="dial-container" id="humControl">
+                            <svg class="dial-svg" width="220" height="220">
+                                <circle class="dial-track" cx="110" cy="110" r="90"></circle>
+                                <circle class="dial-progress" id="humProgress" cx="110" cy="110" r="90"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                <span class="text-4xl font-black text-slate-800" id="humValue">60%</span>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">RH</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Gauge de DPV -->
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4 text-center">Nivel de DPV</h3>
+                    <canvas id="gaugeCanvas" style="width:100%;height:210px;display:block;"></canvas>
+                    <div class="flex justify-center gap-2 mt-3 flex-wrap">
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Riesgo fúngico &lt;0.4</span>
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">Propagación 0.4–0.8</span>
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-green-200 text-green-800">Vegetativo 0.8–1.2</span>
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">Floración 1.2–1.6</span>
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700">Estrés hídrico &gt;1.6</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna de Resultados -->
+            <div class="space-y-6">
+                <div id="resultCard" class="glass-card p-8 transition-colors duration-500">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6">Métricas en Tiempo Real</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-500 uppercase">Déficit de Presión (DPV)</p>
+                            <p class="text-5xl font-black text-blue-600" id="dpvResult">1.27 <span class="text-xl">kPa</span></p>
+                            <span id="zoneBadge" class="zone-indicator mt-3 inline-block bg-amber-100 text-amber-700">Floración</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 gap-4 pt-6 border-t border-slate-200">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase">Presión de vapor de saturación (es)</p>
+                                <p class="text-lg font-bold text-slate-700" id="esResult">3.17 kPa</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase">Presión de vapor (ea)</p>
+                                <p class="text-lg font-bold text-slate-700" id="eaResult">1.90 kPa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Planta reactiva -->
+                <div class="glass-card p-6 flex flex-col items-center">
+                    <h3 class="text-lg font-bold text-slate-700 mb-2 text-center">Estado de la planta</h3>
+                    <svg id="plantSvg" viewBox="0 0 160 200" style="width:100%;max-height:185px">
+                        <!-- Gotas de agua (zona fúngica) -->
+                        <g id="plantDrops" style="opacity:0;transition:opacity 0.6s">
+                            <ellipse cx="56" cy="126" rx="4" ry="6" fill="#60a5fa" transform="rotate(-15,56,126)"/>
+                            <ellipse cx="108" cy="101" rx="3" ry="5" fill="#60a5fa" transform="rotate(10,108,101)"/>
+                            <ellipse cx="72" cy="87" rx="3" ry="5" fill="#60a5fa" transform="rotate(-5,72,87)"/>
+                        </g>
+                        <!-- Manchas de moho (zona fúngica) -->
+                        <g id="plantMold" style="opacity:0;transition:opacity 0.6s">
+                            <circle cx="57" cy="113" r="5" fill="#a78bfa" opacity="0.7"/>
+                            <circle cx="105" cy="93" r="4" fill="#a78bfa" opacity="0.6"/>
+                        </g>
+                        <!-- Maceta -->
+                        <rect x="45" y="162" width="70" height="7" rx="3.5" fill="#94a3b8"/>
+                        <path d="M 48 169 L 57 190 L 103 190 L 112 169 Z" fill="#64748b"/>
+                        <ellipse cx="80" cy="169" rx="32" ry="5.5" fill="#92400e"/>
+                        <!-- Tallo -->
+                        <path id="plantStem" d="M 80 163 L 80 72" stroke="#16a34a" stroke-width="5" fill="none" stroke-linecap="round" style="transition:stroke 0.6s"/>
+                        <!-- Hojas normales -->
+                        <path id="plantLeafL"  d="M 80 128 C 50 120 38 94 53 80 C 58 102 70 120 80 128"  style="fill:#22c55e;transition:fill 0.6s,opacity 0.6s"/>
+                        <path id="plantLeafR"  d="M 80 103 C 110 95 122 69 107 55 C 101 77 90 95 80 103"  style="fill:#22c55e;transition:fill 0.6s,opacity 0.6s"/>
+                        <!-- Hojas caídas (estrés hídrico) -->
+                        <path id="plantLeafLd" d="M 80 128 C 55 142 44 160 50 172 C 63 161 74 144 80 128" style="fill:#fbbf24;opacity:0;transition:fill 0.6s,opacity 0.6s"/>
+                        <path id="plantLeafRd" d="M 80 103 C 106 117 119 137 113 148 C 100 137 88 118 80 103" style="fill:#fbbf24;opacity:0;transition:fill 0.6s,opacity 0.6s"/>
+                        <!-- Hojas superiores -->
+                        <path id="plantLeafTL" d="M 80 72 C 65 62 61 44 70 33 C 74 52 77 65 80 72" style="fill:#22c55e;transition:fill 0.6s"/>
+                        <path id="plantLeafTR" d="M 80 72 C 95 62 99 44 90 33 C 86 52 83 65 80 72" style="fill:#22c55e;transition:fill 0.6s"/>
+                        <!-- Flor (zona de floración) -->
+                        <g id="plantFlower" transform="translate(80,26)" style="opacity:0;transition:opacity 0.6s">
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af"/>
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af" transform="rotate(60)"/>
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af" transform="rotate(120)"/>
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af" transform="rotate(180)"/>
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af" transform="rotate(240)"/>
+                            <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#fda4af" transform="rotate(300)"/>
+                            <circle cx="0" cy="0" r="6" fill="#fbbf24"/>
+                        </g>
+                    </svg>
+                    <p id="plantMsg" class="text-sm font-semibold text-slate-500 text-center mt-1">La planta transpira con normalidad.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulación Día/Noche -->
+        <div class="glass-card p-6 mt-8">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-700">Simulación Día/Noche</h3>
+                    <p class="text-sm text-slate-400">Observa cómo varía el DPV durante un día típico de invernadero</p>
+                </div>
+                <button id="simBtn" class="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                    Reproducir
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3 mb-1">
+                <span class="text-xs font-bold text-slate-400 w-12 text-right">Noche</span>
+                <input type="range" id="simSlider" min="0" max="23" step="0.25" value="6" class="flex-1">
+                <span class="text-xs font-bold text-slate-400 w-12">Dia</span>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-5 px-14">
+                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Hora</p>
+                    <p id="simTime" class="text-2xl font-black text-slate-700">06:00</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Temperatura</p>
+                    <p id="simTemp" class="text-2xl font-black text-slate-700">—</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Humedad</p>
+                    <p id="simHum" class="text-2xl font-black text-slate-700">—</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actividades -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
+            <div class="glass-card p-6 flex flex-col justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-700">Comparador DPV</h3>
+                    <p class="text-sm text-slate-400 mt-1">Actividad práctica: día vs noche e invernadero vs exterior</p>
+                </div>
+                <a href="comparador-dpv.html" target="_blank" rel="noopener"
+                   class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-center">
+                    Abrir actividad
+                </a>
+            </div>
+            <div class="glass-card p-6 flex flex-col justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-700">Quiz DPV</h3>
+                    <p class="text-sm text-slate-400 mt-1">10 preguntas para comprobar lo que has aprendido</p>
+                </div>
+                <a href="quiz-dpv.html" target="_blank" rel="noopener"
+                   class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors text-center">
+                    Abrir quiz
+                </a>
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center text-slate-500 pb-10">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" alt="CC" class="h-6 opacity-60">
+                <p class="text-xs font-medium">© 2026 María Alonso, Francisco Javier Criado y Joaquín Hernández</p>
+                
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            
+                <img src="logos.png?raw=true", width=300>
+                
+            </div>           
+<!--            <p class="text-[10px] uppercase tracking-tighter">Esquema: DPV = 0.6108 * exp(17.27*T / (T+237.3)) * (1 - HR/100)</p>-->
+        </footer>
+    </div>
+
+    <script>
+        let state = {
+            temp: 25.0,
+            hum: 60.0
+        };
+
+        const elements = {
+            tempControl: document.getElementById('tempControl'),
+            tempFill: document.getElementById('tempFill'),
+            tempHandle: document.getElementById('tempHandle'),
+            tempValue: document.getElementById('tempValue'),
+            humControl: document.getElementById('humControl'),
+            humProgress: document.getElementById('humProgress'),
+            humValue: document.getElementById('humValue'),
+            dpvResult: document.getElementById('dpvResult'),
+            esResult: document.getElementById('esResult'),
+            eaResult: document.getElementById('eaResult'),
+            resultCard: document.getElementById('resultCard'),
+            zoneBadge: document.getElementById('zoneBadge'),
+            gaugeCanvas: document.getElementById('gaugeCanvas'),
+        };
+
+        const plant = {
+            drops:  document.getElementById('plantDrops'),
+            mold:   document.getElementById('plantMold'),
+            stem:   document.getElementById('plantStem'),
+            leafL:  document.getElementById('plantLeafL'),
+            leafR:  document.getElementById('plantLeafR'),
+            leafLd: document.getElementById('plantLeafLd'),
+            leafRd: document.getElementById('plantLeafRd'),
+            leafTL: document.getElementById('plantLeafTL'),
+            leafTR: document.getElementById('plantLeafTR'),
+            flower: document.getElementById('plantFlower'),
+            msg:    document.getElementById('plantMsg'),
+        };
+
+        // --- Lógica de Interacción ---
+
+        function updateUI() {
+            // Temperatura
+            const tempPercent = ((state.temp - 0) / 45) * 100; // Rango 0 a 45
+            elements.tempFill.style.height = `${tempPercent}%`;
+            elements.tempHandle.style.bottom = `${tempPercent}%`;
+            elements.tempValue.innerText = `${state.temp.toFixed(1)}°C`;
+
+            // Humedad
+            const humCircum = 2 * Math.PI * 90;
+            const offset = humCircum - (state.hum / 100) * humCircum;
+            elements.humProgress.style.strokeDasharray = `${humCircum}`;
+            elements.humProgress.style.strokeDashoffset = offset;
+            elements.humValue.innerText = `${Math.round(state.hum)}%`;
+
+            calculateVPD();
+        }
+
+        // --- Cálculos ---
+
+        function calculateVPD() {
+            const es = 0.6108 * Math.exp((17.27 * state.temp) / (state.temp + 237.3));
+            const ea = es * (state.hum / 100);
+            const vpd = es - ea;
+
+            elements.esResult.innerText = `${es.toFixed(2)} kPa`;
+            elements.eaResult.innerText = `${ea.toFixed(2)} kPa`;
+            elements.dpvResult.innerText = vpd.toFixed(2);
+
+            // Zona según DPV
+            let color, zoneLabel, badgeClass;
+            if (vpd < 0.4) {
+                color = '#dbeafe'; zoneLabel = 'Riesgo fúngico'; badgeClass = 'bg-blue-100 text-blue-700';
+            } else if (vpd < 0.8) {
+                color = '#dcfce7'; zoneLabel = 'Propagación';    badgeClass = 'bg-green-100 text-green-700';
+            } else if (vpd < 1.2) {
+                color = '#f0fdf4'; zoneLabel = 'Vegetativo';     badgeClass = 'bg-green-200 text-green-800';
+            } else if (vpd < 1.6) {
+                color = '#fef3c7'; zoneLabel = 'Floración';      badgeClass = 'bg-amber-100 text-amber-700';
+            } else {
+                color = '#fee2e2'; zoneLabel = 'Estrés hídrico'; badgeClass = 'bg-red-100 text-red-700';
+            }
+
+            elements.resultCard.style.backgroundColor = color;
+            elements.zoneBadge.innerText = zoneLabel;
+            elements.zoneBadge.className = `zone-indicator mt-3 inline-block ${badgeClass}`;
+            drawGauge(vpd);
+            updatePlant(vpd);
+        }
+
+        // --- Planta reactiva ---
+
+        function updatePlant(vpd) {
+            let stemColor, leafColor, drops, mold, flower, wilt, msg;
+
+            if (vpd < 0.4) {
+                stemColor = '#60a5fa'; leafColor = '#86efac';
+                drops = 1; mold = 1; flower = 0; wilt = 0;
+                msg = 'Los estomas están cerrados. Alta humedad: riesgo de hongos.';
+            } else if (vpd < 0.8) {
+                stemColor = '#22c55e'; leafColor = '#4ade80';
+                drops = 0; mold = 0; flower = 0; wilt = 0;
+                msg = 'Transpiración suave. Ambiente ideal para esquejes y plántulas.';
+            } else if (vpd < 1.2) {
+                stemColor = '#16a34a'; leafColor = '#22c55e';
+                drops = 0; mold = 0; flower = 0; wilt = 0;
+                msg = 'Transpiración óptima. La planta crece vigorosa y sana.';
+            } else if (vpd < 1.6) {
+                stemColor = '#15803d'; leafColor = '#166534';
+                drops = 0; mold = 0; flower = 1; wilt = 0;
+                msg = 'La planta florece. Los nutrientes circulan con eficiencia.';
+            } else {
+                stemColor = '#ca8a04'; leafColor = '#fbbf24';
+                drops = 0; mold = 0; flower = 0; wilt = 1;
+                msg = 'Los estomas se cierran. La planta sufre estrés hídrico severo.';
+            }
+
+            plant.stem.style.stroke = stemColor;
+            [plant.leafL, plant.leafR, plant.leafLd, plant.leafRd, plant.leafTL, plant.leafTR]
+                .forEach(el => el.style.fill = leafColor);
+
+            plant.leafL.style.opacity  = wilt ? '0' : '1';
+            plant.leafR.style.opacity  = wilt ? '0' : '1';
+            plant.leafLd.style.opacity = wilt ? '1' : '0';
+            plant.leafRd.style.opacity = wilt ? '1' : '0';
+
+            plant.drops.style.opacity  = String(drops);
+            plant.mold.style.opacity   = String(mold);
+            plant.flower.style.opacity = String(flower);
+            plant.msg.innerText = msg;
+        }
+
+        // --- Velocímetro DPV ---
+
+        function drawGauge(vpd) {
+            const canvas = elements.gaugeCanvas;
+            if (!canvas || canvas.offsetWidth === 0) return;
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.offsetWidth;
+            const H = canvas.offsetHeight;
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const MAX = 2.5;
+            const cx = W / 2;
+            const cy = H - 16;
+            const R  = Math.min(cx - 22, cy - 28);
+            const TW = Math.round(R * 0.18); // grosor del arco
+
+            // π (izq, vpd=0) → 2π (der, vpd=MAX), pasando por arriba
+            const va = v => Math.PI + (Math.min(v, MAX) / MAX) * Math.PI;
+
+            const zones = [
+                { from: 0,   to: 0.4, fill: '#93c5fd' },
+                { from: 0.4, to: 0.8, fill: '#86efac' },
+                { from: 0.8, to: 1.2, fill: '#4ade80' },
+                { from: 1.2, to: 1.6, fill: '#fbbf24' },
+                { from: 1.6, to: MAX,  fill: '#f87171' },
+            ];
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Fondo gris
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, Math.PI, 2 * Math.PI, false);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = TW;
+            ctx.stroke();
+
+            // Zonas de color
+            for (const z of zones) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, R, va(z.from), va(z.to), false);
+                ctx.strokeStyle = z.fill;
+                ctx.lineWidth = TW;
+                ctx.stroke();
+            }
+
+            // Separadores blancos entre zonas
+            [0.4, 0.8, 1.2, 1.6].forEach(v => {
+                const a = va(v);
+                const r1 = R - TW / 2, r2 = R + TW / 2;
+                ctx.beginPath();
+                ctx.moveTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a));
+                ctx.lineTo(cx + r2 * Math.cos(a), cy + r2 * Math.sin(a));
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            });
+
+            // Valores numéricos en el interior del arco
+            const tf = Math.max(9, Math.round(R * 0.1));
+            ctx.font = `600 ${tf}px system-ui`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#475569';
+            [0, 0.5, 1.0, 1.5, 2.0, 2.5].forEach(v => {
+                const a = va(v);
+                const tr = R - TW / 2 - tf - 4;
+                const label = Number.isInteger(v * 2) && v % 0.5 === 0 ? v.toFixed(1) : v.toFixed(1);
+                ctx.fillText(label, cx + tr * Math.cos(a), cy + tr * Math.sin(a));
+            });
+
+            // Aguja
+            const na   = va(vpd);
+            const nLen = R - TW / 2 - 4;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.25)';
+            ctx.shadowBlur  = 6;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + nLen * Math.cos(na), cy + nLen * Math.sin(na));
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth   = 3.5;
+            ctx.lineCap     = 'round';
+            ctx.stroke();
+            ctx.restore();
+
+            // Pivote
+            ctx.beginPath();
+            ctx.arc(cx, cy, TW * 0.35, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, TW * 0.17, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+        }
+
+        // --- Simulación Día/Noche ---
+        // Curvas típicas de invernadero mediterráneo:
+        //   T(h) = 23 + 4·cos((h−14)·2π/24)  → mín 19°C a las 2h, máx 27°C a las 14h
+        //   RH(h) = 65 − 15·cos((h−14)·2π/24) → mín 50% a las 14h, máx 80% a las 2h
+
+        let simRunning  = false;
+        let simHour     = 6;
+        let simInterval = null;
+
+        function simValues(h) {
+            const angle = (h - 14) * 2 * Math.PI / 24;
+            return {
+                temp: 23 + 4  * Math.cos(angle),
+                hum:  65 - 15 * Math.cos(angle),
+            };
+        }
+
+        function simUpdate(h) {
+            simHour = h;
+            const { temp, hum } = simValues(h);
+            const hh = String(Math.floor(h)).padStart(2, '0');
+            const mm = String(Math.round((h % 1) * 60)).padStart(2, '0');
+            document.getElementById('simTime').innerText = `${hh}:${mm}`;
+            document.getElementById('simTemp').innerText = `${temp.toFixed(1)}°C`;
+            document.getElementById('simHum').innerText  = `${Math.round(hum)}%`;
+            document.getElementById('simSlider').value   = h;
+            state.temp = temp;
+            state.hum  = hum;
+            updateUI();
+        }
+
+        function toggleSim() {
+            simRunning = !simRunning;
+            const btn = document.getElementById('simBtn');
+            if (simRunning) {
+                btn.innerText = 'Pausar';
+                btn.className = btn.className.replace('bg-slate-700 hover:bg-slate-800', 'bg-amber-500 hover:bg-amber-600');
+                elements.tempControl.style.pointerEvents = 'none';
+                elements.tempControl.style.opacity = '0.45';
+                elements.humControl.style.pointerEvents  = 'none';
+                elements.humControl.style.opacity = '0.45';
+                simInterval = setInterval(() => {
+                    simUpdate((simHour + 0.25) % 24);
+                }, 150);
+            } else {
+                clearInterval(simInterval);
+                btn.innerText = 'Reproducir';
+                btn.className = btn.className.replace('bg-amber-500 hover:bg-amber-600', 'bg-slate-700 hover:bg-slate-800');
+                elements.tempControl.style.pointerEvents = '';
+                elements.tempControl.style.opacity = '';
+                elements.humControl.style.pointerEvents  = '';
+                elements.humControl.style.opacity = '';
+            }
+        }
+
+        // --- Eventos ---
+
+        function handleTemp(e) {
+            const rect = elements.tempControl.getBoundingClientRect();
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let percent = 1 - (clientY - rect.top) / rect.height;
+            percent = Math.max(0, Math.min(1, percent));
+            state.temp = percent * 45;
+            updateUI();
+        }
+
+        function handleHum(e) {
+            const rect = elements.humControl.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = clientX - rect.left - rect.width/2;
+            const y = clientY - rect.top - rect.height/2;
+            
+            let angle = Math.atan2(y, x) + Math.PI/2;
+            if (angle < 0) angle += Math.PI * 2;
+            
+            state.hum = (angle / (Math.PI * 2)) * 100;
+            state.hum = Math.max(5, Math.min(95, state.hum));
+            updateUI();
+        }
+
+        // Bindings
+        let isDraggingTemp = false;
+        let isDraggingHum = false;
+
+        elements.tempControl.onmousedown = () => isDraggingTemp = true;
+        elements.humControl.onmousedown = () => isDraggingHum = true;
+        window.onmouseup = () => { isDraggingTemp = false; isDraggingHum = false; };
+        
+        window.onmousemove = (e) => {
+            if(isDraggingTemp) handleTemp(e);
+            if(isDraggingHum) handleHum(e);
+        };
+
+        // Touch support
+        elements.tempControl.ontouchstart = (e) => { isDraggingTemp = true; handleTemp(e); };
+        elements.humControl.ontouchstart = (e) => { isDraggingHum = true; handleHum(e); };
+        window.ontouchmove = (e) => {
+            if(isDraggingTemp) handleTemp(e);
+            if(isDraggingHum) handleHum(e);
+        };
+
+        document.getElementById('simSlider').oninput = e => simUpdate(parseFloat(e.target.value));
+        document.getElementById('simBtn').onclick    = toggleSim;
+
+        // Init
+        window.onload = () => { simUpdate(6); };
+        window.onresize = updateUI;
+    </script>
+</body>
+</html>
